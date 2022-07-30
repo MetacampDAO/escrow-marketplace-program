@@ -22,6 +22,10 @@ pub mod escrow_marketplace_program {
     pub fn purchase_listing(ctx: Context<PurchaseListing>) -> Result<()> {
         instructions::purchase_listing::handler(ctx)
     }
+
+    pub fn cancel_listing(ctx: Context<CancelListing>)  -> Result<()> {
+        instructions::cancel_listing::handler(ctx)
+    }
 }
 
 #[derive(Accounts)]

@@ -43,7 +43,8 @@ describe("escrow-marketplace-program", () => {
       seller.publicKey,
       2e9
     );
-    const latestSellerBlockhash = await provider.connection.getLatestBlockhash();
+    const latestSellerBlockhash =
+      await provider.connection.getLatestBlockhash();
 
     await provider.connection.confirmTransaction({
       blockhash: latestSellerBlockhash.blockhash,
@@ -108,7 +109,6 @@ describe("escrow-marketplace-program", () => {
     assert.ok(_sellerTokenAccount.owner.equals(seller.publicKey));
     assert.ok(_sellerTokenAccount.mint.equals(nftMint));
 
-
     assert.ok(Number(_buyerTokenAccount.amount) == 0);
     assert.ok(_buyerTokenAccount.owner.equals(buyer.publicKey));
     assert.ok(_buyerTokenAccount.mint.equals(nftMint));
@@ -126,9 +126,7 @@ describe("escrow-marketplace-program", () => {
 
     let [_escrowInfoAccount, _escrowInfoAccountBump] =
       await PublicKey.findProgramAddress(
-        [
-          sellerTokenAccount.toBytes(),
-        ],
+        [sellerTokenAccount.toBytes()],
         program.programId
       );
     escrowInfoAccount = _escrowInfoAccount;
@@ -148,15 +146,19 @@ describe("escrow-marketplace-program", () => {
       })
       .signers([seller])
       .rpc();
-    
-    let updatedEscrowInfoAccount = await program.account.escrowInfo.fetch(escrowInfoAccount);
 
-    assert.ok(updatedEscrowInfoAccount.bump == escrowInfoAccountBump)
-    assert.ok(updatedEscrowInfoAccount.escrowToken.equals(escrowTokenAccount))
-    assert.ok(updatedEscrowInfoAccount.listPrice.toNumber() == sellerListingPrice)
-    assert.ok(updatedEscrowInfoAccount.nftMint.equals(nftMint))
-    assert.ok(updatedEscrowInfoAccount.sellerKey.equals(seller.publicKey))
-    assert.ok(updatedEscrowInfoAccount.sellerToken.equals(sellerTokenAccount))
+    let updatedEscrowInfoAccount = await program.account.escrowInfo.fetch(
+      escrowInfoAccount
+    );
+
+    assert.ok(updatedEscrowInfoAccount.bump == escrowInfoAccountBump);
+    assert.ok(updatedEscrowInfoAccount.escrowToken.equals(escrowTokenAccount));
+    assert.ok(
+      updatedEscrowInfoAccount.listPrice.toNumber() == sellerListingPrice
+    );
+    assert.ok(updatedEscrowInfoAccount.nftMint.equals(nftMint));
+    assert.ok(updatedEscrowInfoAccount.sellerKey.equals(seller.publicKey));
+    assert.ok(updatedEscrowInfoAccount.sellerToken.equals(sellerTokenAccount));
 
     const updatedSellerTokenAccount = await getAccount(
       provider.connection,
@@ -168,15 +170,18 @@ describe("escrow-marketplace-program", () => {
       escrowTokenAccount
     );
 
-    assert.ok(Number(updatedSellerTokenAccount.amount) == 0)
-    assert.ok(Number(updatedEscrowTokenAccount.amount) == 1)
-    assert.ok(updatedEscrowTokenAccount.owner.equals(escrowInfoAccount))
-
+    assert.ok(Number(updatedSellerTokenAccount.amount) == 0);
+    assert.ok(Number(updatedEscrowTokenAccount.amount) == 1);
+    assert.ok(updatedEscrowTokenAccount.owner.equals(escrowInfoAccount));
   });
 
   it("purchases listing", async () => {
-    const beforeBuyerLamports = await provider.connection.getBalance(buyer.publicKey);
-    const beforeSellerLamports = await provider.connection.getBalance(seller.publicKey);
+    const beforeBuyerLamports = await provider.connection.getBalance(
+      buyer.publicKey
+    );
+    const beforeSellerLamports = await provider.connection.getBalance(
+      seller.publicKey
+    );
 
     await program.methods
       .purchaseListing()
@@ -197,10 +202,79 @@ describe("escrow-marketplace-program", () => {
       buyerTokenAccount
     );
 
-    const afterBuyerLamports = await provider.connection.getBalance(buyer.publicKey);
-    const afterSellerLamports = await provider.connection.getBalance(seller.publicKey);
-    assert.ok(Number(updatedBuyerTokenAccount.amount) == 1)
-    assert.ok(beforeBuyerLamports - afterBuyerLamports == 1e9)
-    assert.ok(afterSellerLamports - beforeSellerLamports > 1e9)
+    const afterBuyerLamports = await provider.connection.getBalance(
+      buyer.publicKey
+    );
+    const afterSellerLamports = await provider.connection.getBalance(
+      seller.publicKey
+    );
+    assert.ok(Number(updatedBuyerTokenAccount.amount) == 1);
+    assert.ok(beforeBuyerLamports - afterBuyerLamports == 1e9);
+    assert.ok(afterSellerLamports - beforeSellerLamports > 1e9);
+  });
+
+  it("cancels listing", async () => {
+    const [buyerEscrowTokenAccount] = await PublicKey.findProgramAddress(
+      [
+        buyerTokenAccount.toBytes(),
+        Buffer.from(anchor.utils.bytes.utf8.encode("escrow-token")),
+      ],
+      program.programId
+    );
+
+    let [buyerEscrowInfoAccount, buyerEscrowInfoAccountBump] =
+      await PublicKey.findProgramAddress(
+        [buyerTokenAccount.toBytes()],
+        program.programId
+      );
+
+    await program.methods
+      .createListing(new BN(sellerListingPrice), buyerEscrowInfoAccountBump)
+      .accounts({
+        seller: buyer.publicKey,
+        sellerToken: buyerTokenAccount,
+        nftMint,
+        escrowInfo: buyerEscrowInfoAccount,
+        escrowToken: buyerEscrowTokenAccount,
+        systemProgram: SystemProgram.programId,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([buyer])
+      .rpc();
+
+      const updatedBuyerTokenAccount = await getAccount(
+        provider.connection,
+        buyerTokenAccount
+      );
+  
+      const updatedBuyerEscrowTokenAccount = await getAccount(
+        provider.connection,
+        buyerEscrowTokenAccount
+      );
+  
+      assert.ok(Number(updatedBuyerTokenAccount.amount) == 0);
+      assert.ok(Number(updatedBuyerEscrowTokenAccount.amount) == 1);
+      assert.ok(updatedBuyerEscrowTokenAccount.owner.equals(buyerEscrowInfoAccount));
+
+      await program.methods
+        .cancelListing()
+        .accounts({
+          seller: buyer.publicKey,
+          sellerToken: buyerTokenAccount,
+          nftMint,
+          escrowInfo: buyerEscrowInfoAccount,
+          escrowToken: buyerEscrowTokenAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([buyer])
+        .rpc();
+
+        const cancelledBuyerTokenAccount = await getAccount(
+          provider.connection,
+          buyerTokenAccount
+        );
+  
+        assert.ok(Number(cancelledBuyerTokenAccount.amount) == 1);
   });
 });
