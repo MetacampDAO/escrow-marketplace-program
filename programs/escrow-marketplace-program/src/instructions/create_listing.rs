@@ -9,6 +9,7 @@ pub struct CreateListing<'info> {
     #[account(mut)]
     pub seller: Signer<'info>,
     #[account(
+      mut,
       constraint = seller_token.amount == 1,
       constraint = seller_token.owner == seller.to_account_info().key()
   )]
