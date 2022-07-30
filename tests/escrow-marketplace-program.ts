@@ -23,6 +23,7 @@ describe("escrow-marketplace-program", () => {
   let nftMint: PublicKey = null;
 
   let sellerTokenAccount: PublicKey = null;
+  let buyerTokenAccount: PublicKey = null;
 
   let escrowTokenAccount: PublicKey = null;
 
@@ -33,20 +34,33 @@ describe("escrow-marketplace-program", () => {
   const sellerListingPrice = 1e9;
 
   const seller = anchor.web3.Keypair.generate();
+  const buyer = anchor.web3.Keypair.generate();
 
   it("initializes mint and token accounts", async () => {
     // Add your test here.
 
-    const airdropSig = await provider.connection.requestAirdrop(
+    const airdropSellerSig = await provider.connection.requestAirdrop(
       seller.publicKey,
       2e9
     );
-    const latestBlockhash = await provider.connection.getLatestBlockhash();
+    const latestSellerBlockhash = await provider.connection.getLatestBlockhash();
 
     await provider.connection.confirmTransaction({
-      blockhash: latestBlockhash.blockhash,
-      lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-      signature: airdropSig,
+      blockhash: latestSellerBlockhash.blockhash,
+      lastValidBlockHeight: latestSellerBlockhash.lastValidBlockHeight,
+      signature: airdropSellerSig,
+    });
+
+    const airdropBuyerSig = await provider.connection.requestAirdrop(
+      buyer.publicKey,
+      2e9
+    );
+    const latestBuyerBlockhash = await provider.connection.getLatestBlockhash();
+
+    await provider.connection.confirmTransaction({
+      blockhash: latestBuyerBlockhash.blockhash,
+      lastValidBlockHeight: latestBuyerBlockhash.lastValidBlockHeight,
+      signature: airdropBuyerSig,
     });
 
     nftMint = await createMint(
@@ -64,6 +78,13 @@ describe("escrow-marketplace-program", () => {
       seller.publicKey
     );
 
+    buyerTokenAccount = await createAccount(
+      provider.connection,
+      buyer,
+      nftMint,
+      buyer.publicKey
+    );
+
     await mintTo(
       provider.connection,
       seller,
@@ -78,15 +99,25 @@ describe("escrow-marketplace-program", () => {
       sellerTokenAccount
     );
 
+    const _buyerTokenAccount = await getAccount(
+      provider.connection,
+      buyerTokenAccount
+    );
+
     assert.ok(Number(_sellerTokenAccount.amount) == sellerNftTokenAmount);
     assert.ok(_sellerTokenAccount.owner.equals(seller.publicKey));
     assert.ok(_sellerTokenAccount.mint.equals(nftMint));
+
+
+    assert.ok(Number(_buyerTokenAccount.amount) == 0);
+    assert.ok(_buyerTokenAccount.owner.equals(buyer.publicKey));
+    assert.ok(_buyerTokenAccount.mint.equals(nftMint));
   });
 
-  it("create listing", async () => {
+  it("creates listing", async () => {
     let [_escrowTokenAccount] = await PublicKey.findProgramAddress(
       [
-        nftMint.toBytes(),
+        sellerTokenAccount.toBytes(),
         Buffer.from(anchor.utils.bytes.utf8.encode("escrow-token")),
       ],
       program.programId
@@ -96,8 +127,7 @@ describe("escrow-marketplace-program", () => {
     let [_escrowInfoAccount, _escrowInfoAccountBump] =
       await PublicKey.findProgramAddress(
         [
-          nftMint.toBytes(),
-          Buffer.from(anchor.utils.bytes.utf8.encode("escrow-info")),
+          sellerTokenAccount.toBytes(),
         ],
         program.programId
       );
@@ -142,5 +172,35 @@ describe("escrow-marketplace-program", () => {
     assert.ok(Number(updatedEscrowTokenAccount.amount) == 1)
     assert.ok(updatedEscrowTokenAccount.owner.equals(escrowInfoAccount))
 
+  });
+
+  it("purchases listing", async () => {
+    const beforeBuyerLamports = await provider.connection.getBalance(buyer.publicKey);
+    const beforeSellerLamports = await provider.connection.getBalance(seller.publicKey);
+
+    await program.methods
+      .purchaseListing()
+      .accounts({
+        buyer: buyer.publicKey,
+        buyerToken: buyerTokenAccount,
+        nftMint,
+        seller: seller.publicKey,
+        escrowInfo: escrowInfoAccount,
+        escrowToken: escrowTokenAccount,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([buyer])
+      .rpc();
+
+    const updatedBuyerTokenAccount = await getAccount(
+      provider.connection,
+      buyerTokenAccount
+    );
+
+    const afterBuyerLamports = await provider.connection.getBalance(buyer.publicKey);
+    const afterSellerLamports = await provider.connection.getBalance(seller.publicKey);
+    assert.ok(Number(updatedBuyerTokenAccount.amount) == 1)
+    assert.ok(beforeBuyerLamports - afterBuyerLamports == 1e9)
+    assert.ok(afterSellerLamports - beforeSellerLamports > 1e9)
   });
 });

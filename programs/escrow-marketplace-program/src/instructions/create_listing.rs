@@ -20,11 +20,11 @@ pub struct CreateListing<'info> {
       constraint = seller_token.mint == nft_mint.key()
   )]
     pub nft_mint: Account<'info, Mint>,
-    #[account(init, payer = seller, space = 8 + ESCROW_INFO_LEN, seeds = [nft_mint.key().as_ref(), b"escrow-info"], bump)]
+    #[account(init, payer = seller, space = 8 + ESCROW_INFO_LEN, seeds = [seller_token.key().as_ref()], bump)]
     pub escrow_info: Account<'info, EscrowInfo>,
     #[account(
       init,
-      seeds = [nft_mint.key().as_ref(), b"escrow-token"],
+      seeds = [seller_token.key().as_ref(), b"escrow-token"],
       bump,
       payer = seller,
       token::mint = nft_mint,
