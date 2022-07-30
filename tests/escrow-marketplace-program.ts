@@ -30,7 +30,7 @@ describe("escrow-marketplace-program", () => {
   let escrowInfoAccountBump: number = null;
 
   const sellerNftTokenAmount = 1;
-  const sellerListingAmount = 1e9;
+  const sellerListingPrice = 1e9;
 
   const seller = anchor.web3.Keypair.generate();
 
@@ -105,7 +105,7 @@ describe("escrow-marketplace-program", () => {
     escrowInfoAccountBump = _escrowInfoAccountBump;
 
     await program.methods
-      .createListing(new BN(sellerListingAmount), escrowInfoAccountBump)
+      .createListing(new BN(sellerListingPrice), escrowInfoAccountBump)
       .accounts({
         seller: seller.publicKey,
         sellerToken: sellerTokenAccount,
@@ -118,5 +118,29 @@ describe("escrow-marketplace-program", () => {
       })
       .signers([seller])
       .rpc();
+    
+    let updatedEscrowInfoAccount = await program.account.escrowInfo.fetch(escrowInfoAccount);
+
+    assert.ok(updatedEscrowInfoAccount.bump == escrowInfoAccountBump)
+    assert.ok(updatedEscrowInfoAccount.escrowToken.equals(escrowTokenAccount))
+    assert.ok(updatedEscrowInfoAccount.listPrice.toNumber() == sellerListingPrice)
+    assert.ok(updatedEscrowInfoAccount.nftMint.equals(nftMint))
+    assert.ok(updatedEscrowInfoAccount.sellerKey.equals(seller.publicKey))
+    assert.ok(updatedEscrowInfoAccount.sellerToken.equals(sellerTokenAccount))
+
+    const updatedSellerTokenAccount = await getAccount(
+      provider.connection,
+      sellerTokenAccount
+    );
+
+    const updatedEscrowTokenAccount = await getAccount(
+      provider.connection,
+      escrowTokenAccount
+    );
+
+    assert.ok(Number(updatedSellerTokenAccount.amount) == 0)
+    assert.ok(Number(updatedEscrowTokenAccount.amount) == 1)
+    assert.ok(updatedEscrowTokenAccount.owner.equals(escrowInfoAccount))
+
   });
 });
