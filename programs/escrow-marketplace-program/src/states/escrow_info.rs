@@ -4,7 +4,8 @@ pub const ESCROW_INFO_LEN: usize = 32 // NFT MINT
   + 32  // SELLER KEY
   + 32  // SELLER TOKEN ACCOUNT
   + 32  // ESCROW TOKEN ACCOUNT
-  + 16; // LIST PRICE 
+  + 16  // LIST PRICE 
+  + 1;  // bump
 
 #[account]
 pub struct EscrowInfo {
@@ -13,6 +14,7 @@ pub struct EscrowInfo {
   pub seller_token: Pubkey,
   pub escrow_token: Pubkey,
   pub list_price: u128,
+  pub bump: u8,
 }
 
 impl EscrowInfo {
