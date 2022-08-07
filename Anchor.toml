@@ -1,14 +1,14 @@
 [features]
 seeds = false
 [programs.localnet]
-escrow_marketplace_program = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+escrow_marketplace_program = "DBZ5u3AaFpJMEGKhfQgmXQqUtTzQ5KpjXG9eZRn9R7cV"
 
 [registry]
 url = "https://anchor.projectserum.com"
 
 [provider]
 cluster = "localnet"
-wallet = "/Users/vincentleow/.config/solana/id.json"
+wallet = "/Users/vincentleow/.config/solana/jake.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

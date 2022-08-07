@@ -1,3 +1,3 @@
-pub mod escrow_info;
+pub mod listing_proof;
 
-pub use escrow_info::*;
+pub use listing_proof::*;

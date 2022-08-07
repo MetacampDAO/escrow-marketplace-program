@@ -20,8 +20,8 @@ pub struct CreateListing<'info> {
       constraint = seller_token.mint == nft_mint.key()
   )]
     pub nft_mint: Account<'info, Mint>,
-    #[account(init, payer = seller, space = 8 + ESCROW_INFO_LEN, seeds = [seller_token.key().as_ref()], bump)]
-    pub escrow_info: Account<'info, EscrowInfo>,
+    #[account(init, payer = seller, space = 8 + LISTING_PROOF_LEN, seeds = [seller_token.key().as_ref()], bump)]
+    pub listing_proof: Account<'info, ListingProof>,
     #[account(
       init,
       seeds = [seller_token.key().as_ref(), b"escrow-token"],
@@ -38,7 +38,7 @@ pub struct CreateListing<'info> {
 }
 
 impl<'info> CreateListing<'info> {
-    fn set_authority_to_escrow_info(&self) -> Result<()> {
+    fn set_authority_to_listing_proof(&self) -> Result<()> {
         let cpi_accounts = SetAuthority {
             account_or_mint: self.escrow_token.to_account_info().clone(),
             current_authority: self.seller.to_account_info().clone(),
@@ -47,7 +47,7 @@ impl<'info> CreateListing<'info> {
         token::set_authority(
             CpiContext::new(self.token_program.clone(), cpi_accounts),
             AuthorityType::AccountOwner,
-            Some(self.escrow_info.key()),
+            Some(self.listing_proof.key()),
         )?;
 
         Ok(())
@@ -66,17 +66,17 @@ impl<'info> CreateListing<'info> {
     }
 }
 
-pub fn handler(ctx: Context<CreateListing>, list_price: u128, escrow_info_bump: u8) -> Result<()> {
-    ctx.accounts.escrow_info.init_escrow_info(
+pub fn handler(ctx: Context<CreateListing>, list_price: u128, listing_proof_bump: u8) -> Result<()> {
+    ctx.accounts.listing_proof.init_listing_proof(
         ctx.accounts.nft_mint.key(),
         ctx.accounts.seller.key(),
         ctx.accounts.seller_token.key(),
         ctx.accounts.escrow_token.key(),
         list_price,
-        escrow_info_bump,
+        listing_proof_bump,
     );
 
-    ctx.accounts.set_authority_to_escrow_info()?;
+    ctx.accounts.set_authority_to_listing_proof()?;
     ctx.accounts.transfer_to_escrow_token()?;
 
     Ok(())

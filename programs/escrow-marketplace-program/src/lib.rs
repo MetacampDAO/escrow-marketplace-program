@@ -4,7 +4,7 @@ pub use instructions::*;
 
 pub mod instructions;
 pub mod states;
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("DBZ5u3AaFpJMEGKhfQgmXQqUtTzQ5KpjXG9eZRn9R7cV");
 
 #[program]
 pub mod escrow_marketplace_program {
@@ -14,9 +14,9 @@ pub mod escrow_marketplace_program {
     pub fn create_listing(
         ctx: Context<CreateListing>,
         list_price: u128,
-        escrow_info_bump: u8,
+        listing_proof_bump: u8,
     ) -> Result<()> {
-        instructions::create_listing::handler(ctx, list_price, escrow_info_bump)
+        instructions::create_listing::handler(ctx, list_price, listing_proof_bump)
     }
 
     pub fn purchase_listing(ctx: Context<PurchaseListing>) -> Result<()> {

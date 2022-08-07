@@ -24,20 +24,20 @@ pub struct PurchaseListing<'info> {
   pub seller: AccountInfo<'info>,
   #[account(
     mut, 
-    seeds = [escrow_info.seller_token.key().as_ref()], 
-    bump = escrow_info.bump,
-    constraint = escrow_info.nft_mint == nft_mint.key(),
-    constraint = escrow_info.seller_key == seller.key(),
-    constraint = escrow_info.escrow_token == escrow_token.key(),
+    seeds = [listing_proof.seller_token.key().as_ref()], 
+    bump = listing_proof.bump,
+    constraint = listing_proof.nft_mint == nft_mint.key(),
+    constraint = listing_proof.seller_key == seller.key(),
+    constraint = listing_proof.escrow_token == escrow_token.key(),
     close = seller,
   )]
-  pub escrow_info: Account<'info, EscrowInfo>,
+  pub listing_proof: Account<'info, ListingProof>,
   #[account(
     mut,
-    seeds = [escrow_info.seller_token.key().as_ref(), b"escrow-token"],
+    seeds = [listing_proof.seller_token.key().as_ref(), b"escrow-token"],
     bump,
     token::mint = nft_mint,
-    token::authority = escrow_info,
+    token::authority = listing_proof,
     constraint = escrow_token.amount == 1,
 )]
   pub escrow_token: Account<'info, TokenAccount>,
@@ -57,7 +57,7 @@ impl <'info> PurchaseListing <'info> {
             .buyer_token
             .to_account_info()
             .clone(),
-        authority: self.escrow_info.to_account_info().clone(),
+        authority: self.listing_proof.to_account_info().clone(),
     };
 
     token::transfer(
@@ -76,7 +76,7 @@ impl <'info> PurchaseListing <'info> {
       let cpi_accounts = CloseAccount {
           account: self.escrow_token.to_account_info().clone(),
           destination: self.seller.clone(),
-          authority: self.escrow_info.to_account_info().clone(),
+          authority: self.listing_proof.to_account_info().clone(),
       };
       token::close_account(
         CpiContext::new(self.token_program.clone(), cpi_accounts)
@@ -87,8 +87,8 @@ impl <'info> PurchaseListing <'info> {
 }
 
 pub fn handler(ctx: Context<PurchaseListing>) -> Result<()> {
-  let escrow_info_seed = ctx.accounts.escrow_info.seller_token.as_ref();
-  let authority_seeds = &[&escrow_info_seed[..], &[ctx.accounts.escrow_info.bump]];
+  let listing_proof_seed = ctx.accounts.listing_proof.seller_token.as_ref();
+  let authority_seeds = &[&listing_proof_seed[..], &[ctx.accounts.listing_proof.bump]];
 
   ctx.accounts.transfer_to_buyer_token_account(authority_seeds)?;
   ctx.accounts.close_escrow_token_account(authority_seeds)?;
@@ -97,7 +97,7 @@ pub fn handler(ctx: Context<PurchaseListing>) -> Result<()> {
     &system_instruction::transfer(
       ctx.accounts.buyer.key, 
       ctx.accounts.seller.key,
-      ctx.accounts.escrow_info.list_price as u64
+      ctx.accounts.listing_proof.list_price as u64
     ),
     &[
       ctx.accounts.buyer.to_account_info().clone(),

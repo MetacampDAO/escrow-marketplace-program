@@ -138,7 +138,7 @@ describe("escrow-marketplace-program", () => {
         seller: seller.publicKey,
         sellerToken: sellerTokenAccount,
         nftMint,
-        escrowInfo: escrowInfoAccount,
+        listingProof: escrowInfoAccount,
         escrowToken: escrowTokenAccount,
         systemProgram: SystemProgram.programId,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
@@ -147,7 +147,7 @@ describe("escrow-marketplace-program", () => {
       .signers([seller])
       .rpc();
 
-    let updatedEscrowInfoAccount = await program.account.escrowInfo.fetch(
+    let updatedEscrowInfoAccount = await program.account.listingProof.fetch(
       escrowInfoAccount
     );
 
@@ -190,7 +190,7 @@ describe("escrow-marketplace-program", () => {
         buyerToken: buyerTokenAccount,
         nftMint,
         seller: seller.publicKey,
-        escrowInfo: escrowInfoAccount,
+        listingProof: escrowInfoAccount,
         escrowToken: escrowTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
@@ -234,7 +234,7 @@ describe("escrow-marketplace-program", () => {
         seller: buyer.publicKey,
         sellerToken: buyerTokenAccount,
         nftMint,
-        escrowInfo: buyerEscrowInfoAccount,
+        listingProof: buyerEscrowInfoAccount,
         escrowToken: buyerEscrowTokenAccount,
         systemProgram: SystemProgram.programId,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
@@ -263,7 +263,7 @@ describe("escrow-marketplace-program", () => {
           seller: buyer.publicKey,
           sellerToken: buyerTokenAccount,
           nftMint,
-          escrowInfo: buyerEscrowInfoAccount,
+          listingProof: buyerEscrowInfoAccount,
           escrowToken: buyerEscrowTokenAccount,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
